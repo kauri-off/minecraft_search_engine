@@ -32,9 +32,7 @@ async fn process_ip(ip: SocketAddr) -> Result<()> {
 
 async fn wait_for_ip(mut rx: Receiver<SocketAddr>) {
     while let Some(ip) = rx.recv().await {
-        if let Err(e) = process_ip(ip).await {
-            println!("{}", e);
-        }
+        tokio::spawn(process_ip(ip));
     }
 }
 
