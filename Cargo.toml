@@ -1,0 +1,10 @@
+[package]
+name = "minecraft_serach_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+flate2 = "1.0.33"
+rand = "0.8.5"
+serde_json = "1.0.127"
+tokio = { version = "1.39.3", features = ["full"] }
