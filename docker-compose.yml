@@ -1,0 +1,4 @@
+services:
+  mse:
+    build: .
+    restart: unless-stopped
