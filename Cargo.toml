@@ -1,5 +1,5 @@
 [package]
-name = "minecraft_serach_engine"
+name = "minecraft_search_engine"
 version = "0.1.0"
 edition = "2021"
 
