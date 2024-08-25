@@ -15,9 +15,9 @@ use crate::{
 pub struct ServerStatus {
     pub version: String,
     pub motd: String,
-    pub online: String,
-    pub max_online: String,
-    pub protocol: i32,
+    pub online: i64,
+    pub max_online: i64,
+    pub protocol: i64,
 }
 
 pub async fn get_motd(addr: SocketAddr) -> Result<ServerStatus> {
@@ -44,25 +44,19 @@ pub async fn get_motd(addr: SocketAddr) -> Result<ServerStatus> {
     Ok(ServerStatus {
         version: status["version"]["name"].as_str().unwrap_or("").to_string(),
         motd: status["description"].as_str().unwrap_or("").to_string(),
-        online: status["players"]["online"]
-            .as_number()
-            .unwrap_or(&Number::from(-1))
-            .to_string(),
-        max_online: status["players"]["max"]
-            .as_number()
-            .unwrap_or(&Number::from(-1))
-            .to_string(),
-        protocol: status["version"]["protocol"].as_i64().unwrap_or(765) as i32,
+        online: status["players"]["online"].as_i64().unwrap_or(-1),
+        max_online: status["players"]["max"].as_i64().unwrap_or(-1),
+        protocol: status["version"]["protocol"].as_i64().unwrap_or(765),
     })
 }
 
-pub async fn license(addr: SocketAddr, protocol: i32) -> Result<bool> {
+pub async fn license(addr: SocketAddr, protocol: i64) -> Result<bool> {
     let socket = TcpSocket::new_v4()?;
     let mut stream = socket.connect(addr).await?;
 
     let handshake = Handshake {
         packet_id: VarInt(0x00),
-        protocol_version: VarInt(protocol),
+        protocol_version: VarInt(protocol as i32),
         server_address: addr.ip().to_string(),
         server_port: addr.port(),
         next_state: VarInt(0x02),
