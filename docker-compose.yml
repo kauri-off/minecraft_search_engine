@@ -2,3 +2,5 @@ services:
   mse:
     build: .
     restart: unless-stopped
+    volumes:
+      - ./db:/app/data
