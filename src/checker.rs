@@ -3,7 +3,7 @@ use std::{
     net::SocketAddr,
 };
 
-use serde_json::{Number, Value};
+use serde_json::Value;
 use tokio::net::TcpSocket;
 
 use crate::{
@@ -40,10 +40,19 @@ pub async fn get_motd(addr: SocketAddr) -> Result<ServerStatus> {
     let status = Status::deserialize(&response).await?;
 
     let status: Value = serde_json::from_str(&status.status)?;
+    dbg!(&status);
+
+    let motd = if let Some(motd) = status["description"].as_str() {
+        motd.to_string()
+    } else if let Some(motd) = status["description"]["text"].as_str() {
+        motd.to_string()
+    } else {
+        String::from("None")
+    };
 
     Ok(ServerStatus {
         version: status["version"]["name"].as_str().unwrap_or("").to_string(),
-        motd: status["description"].as_str().unwrap_or("").to_string(),
+        motd,
         online: status["players"]["online"].as_i64().unwrap_or(-1),
         max_online: status["players"]["max"].as_i64().unwrap_or(-1),
         protocol: status["version"]["protocol"].as_i64().unwrap_or(765),
