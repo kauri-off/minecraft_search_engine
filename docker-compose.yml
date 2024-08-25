@@ -4,3 +4,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./db:/app/data
+    environment:
+      - THREADS=30
+      - DB=/app/data/database.db

@@ -10,8 +10,8 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new() -> Result<Arc<Mutex<Self>>> {
-        let conn = Connection::open("/app/data/database.db")?;
+    pub fn new(path: &str) -> Result<Arc<Mutex<Self>>> {
+        let conn = Connection::open(path)?;
         let db = Database { conn };
 
         db.init_table()?;
