@@ -35,7 +35,7 @@ impl Database {
 
     pub fn add(&self, status: &ServerStatus, license: i32) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO items (version, motd, online, max_online, license) VALUES (?1)",
+            "INSERT INTO servers (version, motd, online, max_online, license) VALUES (?1)",
             params![
                 status.version,
                 status.motd,
