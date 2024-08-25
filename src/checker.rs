@@ -40,7 +40,6 @@ pub async fn get_motd(addr: SocketAddr) -> Result<ServerStatus> {
     let status = Status::deserialize(&response).await?;
 
     let status: Value = serde_json::from_str(&status.status)?;
-    dbg!(&status);
 
     let motd = if let Some(motd) = status["description"].as_str() {
         motd.to_string()
