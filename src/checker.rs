@@ -80,7 +80,9 @@ pub async fn license(addr: SocketAddr, protocol: i32) -> Result<bool> {
 
     let packet = Packet::read_uncompressed(&mut stream).await?;
 
-    if packet.packet_id.0 == 0x02 {
+    if packet.packet_id.0 == 0x01 {
+        return Ok(true);
+    } else if packet.packet_id.0 == 0x02 {
         return Ok(false);
     } else if packet.packet_id.0 == 0x03 {
         let compression = SetCompression::deserialize(&packet).await?;
@@ -91,7 +93,12 @@ pub async fn license(addr: SocketAddr, protocol: i32) -> Result<bool> {
         } else {
             return Ok(true);
         }
+    } else if packet.packet_id.0 == 0x00 {
+        return Err(Error::new(std::io::ErrorKind::Other, "Disconnected"));
     } else {
-        return Err(Error::new(std::io::ErrorKind::Other, "Packet ID Error"));
+        return Err(Error::new(
+            std::io::ErrorKind::Other,
+            format!("Packet ID Error: {}", packet.packet_id.0),
+        ));
     }
 }
