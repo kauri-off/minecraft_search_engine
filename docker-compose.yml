@@ -5,5 +5,5 @@ services:
     volumes:
       - ./db:/app/data
     environment:
-      - THREADS=30
+      - THREADS=1000
       - DB=/app/data/database.db

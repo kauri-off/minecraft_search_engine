@@ -30,7 +30,7 @@ async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>) -> Result<()> {
         Err(_) => -1,
     };
 
-    db.lock().await.add(&motd, license).unwrap();
+    db.lock().await.add(ip, &motd, license).unwrap();
 
     println!(
         "[+] ({}) -> {} | {} | {}/{} | License: {:?}",
