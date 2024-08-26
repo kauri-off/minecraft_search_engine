@@ -85,7 +85,12 @@ async fn generator(tx: Arc<Sender<SocketAddr>>) {
 
 #[tokio::main]
 async fn main() {
-    println!("Minectaft Search Engine --- Starting");
+    colored::control::set_override(true);
+    println!("Minectaft Search Engine --- {}", "Starting".green());
+    get_motd("37.150.146.148:25565".parse().unwrap())
+        .await
+        .unwrap();
+    return;
     let threads: i32 = env::var("THREADS")
         .unwrap_or("30".to_string())
         .parse()
