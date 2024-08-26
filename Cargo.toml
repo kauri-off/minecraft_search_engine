@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+colored = "2.1.0"
 flate2 = "1.0.33"
 rand = "0.8.5"
 rusqlite = "0.32.1"

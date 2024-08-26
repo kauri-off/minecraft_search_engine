@@ -1,6 +1,7 @@
 use std::{env, io::Result, net::SocketAddr, sync::Arc};
 
 use checker::{get_motd, license};
+use colored::Colorize;
 use database::Database;
 use tokio::sync::{
     mpsc::{self, Receiver, Sender},
@@ -22,25 +23,43 @@ async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>) -> Result<()> {
     let license = match licensed {
         Ok(t) => {
             if t {
+                println!(
+                    "[/] ({}) -> {} | {} | {}/{} | License: Yes",
+                    ip.ip(),
+                    motd.version.red(),
+                    motd.motd.blue(),
+                    motd.online,
+                    motd.max_online,
+                );
                 1
             } else {
+                println!(
+                    "[+] ({}) -> {} | {} | {}/{} | {}",
+                    ip.ip(),
+                    motd.version.red(),
+                    motd.motd.blue(),
+                    motd.online,
+                    motd.max_online,
+                    "License: No".green()
+                );
                 0
             }
         }
-        Err(_) => -1,
+        Err(_) => {
+            println!(
+                "[/] ({}) -> {} | {} | {}/{} | License: Error",
+                ip.ip(),
+                motd.version.red(),
+                motd.motd.blue(),
+                motd.online,
+                motd.max_online,
+            );
+            -1
+        }
     };
 
     db.lock().await.add(ip, &motd, license).unwrap();
 
-    println!(
-        "[+] ({}) -> {} | {} | {}/{} | License: {:?}",
-        ip.ip(),
-        motd.version,
-        motd.motd,
-        motd.online,
-        motd.max_online,
-        licensed
-    );
     Ok(())
 }
 
