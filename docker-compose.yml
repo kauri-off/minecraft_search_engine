@@ -8,3 +8,4 @@ services:
       - THREADS=1000
       - DB=/app/data/database.db
       - UPDATE=0
+      - ONLY_CRACKED=0

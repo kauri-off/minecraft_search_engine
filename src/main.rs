@@ -21,7 +21,7 @@ mod checker;
 mod database;
 mod utils;
 
-async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>) -> Result<()> {
+async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>, only_cracked: bool) -> Result<()> {
     let info = get_full_info(ip).await?;
 
     let (prefix, license) = match info.license {
@@ -30,6 +30,12 @@ async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>) -> Result<()> {
         -1 => ("-", "License: Error".to_string()),
         _ => ("", "".to_string()),
     };
+
+    db.lock().await.add(&info).unwrap();
+
+    if only_cracked && info.license != 0 {
+        return Ok(());
+    }
 
     println!(
         "[{}] ({}) -> {} | {} | {}/{} | {}",
@@ -42,16 +48,14 @@ async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>) -> Result<()> {
         license
     );
 
-    db.lock().await.add(&info).unwrap();
-
     Ok(())
 }
 
-async fn wait_for_ip(mut rx: Receiver<SocketAddr>, path: String) {
+async fn wait_for_ip(mut rx: Receiver<SocketAddr>, path: String, only_cracked: bool) {
     let db = Database::new(&path).unwrap();
 
     while let Some(ip) = rx.recv().await {
-        tokio::spawn(process_ip(ip, db.clone()));
+        tokio::spawn(process_ip(ip, db.clone(), only_cracked));
     }
 }
 
@@ -67,7 +71,7 @@ async fn generator(tx: Arc<Sender<SocketAddr>>) {
     }
 }
 
-async fn update(path: &str) -> Result<()> {
+async fn update(path: &str, only_cracked: bool) -> Result<()> {
     let db = Database::new(path).unwrap();
 
     let servers = db.lock().await.get_all().unwrap();
@@ -91,6 +95,7 @@ async fn update(path: &str) -> Result<()> {
                 process_ip(
                     format!("{}:{}", server.ip, server.port).parse().unwrap(),
                     db_clone,
+                    only_cracked,
                 ),
             ));
         }
@@ -123,15 +128,20 @@ async fn main() {
         .parse::<u8>()
         .map(|v| v != 0)
         .unwrap_or(false);
+    let only_cracked: bool = env::var("ONLY_CRACKED")
+        .unwrap_or("0".to_string())
+        .parse::<u8>()
+        .map(|v| v != 0)
+        .unwrap_or(false);
 
     if update_db {
-        if let Err(e) = update(&path).await {
+        if let Err(e) = update(&path, only_cracked).await {
             println!("Updating: {}, {}", "error".red(), e);
         }
     }
 
     let (tx, rx) = mpsc::channel(256);
-    let reciever_thread = tokio::spawn(wait_for_ip(rx, path));
+    let reciever_thread = tokio::spawn(wait_for_ip(rx, path, only_cracked));
 
     let mut generators = Vec::new();
     let tx = Arc::new(tx);
