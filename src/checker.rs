@@ -12,6 +12,42 @@ use crate::{
     types::var_int::VarInt,
 };
 
+pub struct Info {
+    pub ip: String,
+    pub port: String,
+    pub version: String,
+    pub description: String,
+    pub online: i64,
+    pub max_online: i64,
+    pub license: i32,
+}
+
+pub async fn get_full_info(addr: SocketAddr) -> Result<Info> {
+    let motd = get_motd(addr).await?;
+    let licensed = license(addr, motd.protocol).await;
+
+    let license = match licensed {
+        Ok(t) => {
+            if t {
+                1
+            } else {
+                0
+            }
+        }
+        Err(_) => -1,
+    };
+
+    Ok(Info {
+        ip: addr.ip().to_string(),
+        port: addr.port().to_string(),
+        version: motd.version,
+        description: motd.motd,
+        online: motd.online,
+        max_online: motd.max_online,
+        license,
+    })
+}
+
 pub struct ServerStatus {
     pub version: String,
     pub motd: String,

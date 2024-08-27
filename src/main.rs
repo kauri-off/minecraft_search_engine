@@ -1,6 +1,6 @@
 use std::{env, io::Result, net::SocketAddr, sync::Arc};
 
-use checker::{get_motd, license};
+use checker::{get_full_info, get_motd, license};
 use colored::Colorize;
 use database::Database;
 use tokio::sync::{
@@ -18,47 +18,27 @@ mod database;
 mod utils;
 
 async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>) -> Result<()> {
-    let motd = get_motd(ip).await?;
-    let licensed = license(ip, motd.protocol).await;
-    let license = match licensed {
-        Ok(t) => {
-            if t {
-                println!(
-                    "[/] ({}) -> {} | {} | {}/{} | License: Yes",
-                    ip.ip(),
-                    motd.version.red(),
-                    motd.motd.blue(),
-                    motd.online,
-                    motd.max_online,
-                );
-                1
-            } else {
-                println!(
-                    "[+] ({}) -> {} | {} | {}/{} | {}",
-                    ip.ip(),
-                    motd.version.red(),
-                    motd.motd.blue(),
-                    motd.online,
-                    motd.max_online,
-                    "License: No".green()
-                );
-                0
-            }
-        }
-        Err(_) => {
-            println!(
-                "[/] ({}) -> {} | {} | {}/{} | License: Error",
-                ip.ip(),
-                motd.version.red(),
-                motd.motd.blue(),
-                motd.online,
-                motd.max_online,
-            );
-            -1
-        }
+    let info = get_full_info(ip).await?;
+
+    let (prefix, license) = match info.license {
+        1 => ("/", "License: Yes".to_string()),
+        0 => ("+", "License: No".green().to_string()),
+        -1 => ("-", "License: Error".to_string()),
+        _ => ("", "".to_string()),
     };
 
-    db.lock().await.add(ip, &motd, license).unwrap();
+    println!(
+        "[{}] ({}) -> {} | {} | {}/{} | {}",
+        prefix,
+        info.ip,
+        info.version.red(),
+        info.description.blue(),
+        info.online,
+        info.max_online,
+        license
+    );
+
+    db.lock().await.add(&info).unwrap();
 
     Ok(())
 }
@@ -89,7 +69,7 @@ async fn main() {
     println!("Minectaft Search Engine --- {}", "Starting".green());
 
     let threads: i32 = env::var("THREADS")
-        .unwrap_or("30".to_string())
+        .unwrap_or("1000".to_string())
         .parse()
         .unwrap();
     let path = env::var("DB").unwrap_or("/app/data/database.db".to_string());

@@ -1,9 +1,9 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 use rusqlite::{params, Connection, Result};
 use tokio::sync::Mutex;
 
-use crate::checker::ServerStatus;
+use crate::checker::Info;
 
 pub struct Database {
     conn: Connection,
@@ -34,16 +34,16 @@ impl Database {
         Ok(())
     }
 
-    pub fn add(&self, addr: SocketAddr, status: &ServerStatus, license: i32) -> Result<()> {
+    pub fn add(&self, info: &Info) -> Result<()> {
         self.conn.execute(
             "INSERT INTO servers (ip, version, motd, online, max_online, license) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             params![
-                addr.to_string(),
-                status.version,
-                status.motd,
-                status.online,
-                status.max_online,
-                license
+                info.ip,
+                info.version,
+                info.description,
+                info.online,
+                info.max_online,
+                info.license
             ],
         )?;
         Ok(())
