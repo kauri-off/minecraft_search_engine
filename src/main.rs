@@ -116,8 +116,9 @@ async fn main() {
     let path = env::var("DB").unwrap_or("/app/data/database.db".to_string());
     let update_db: bool = env::var("UPDATE")
         .unwrap_or("0".to_string())
-        .parse()
-        .unwrap();
+        .parse::<u8>()
+        .map(|v| v != 0)
+        .unwrap_or(false);
 
     if update_db {
         if let Err(e) = update(&path).await {
