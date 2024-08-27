@@ -71,7 +71,7 @@ impl Database {
     }
 
     pub fn drop_servers(&self) -> Result<()> {
-        self.conn.execute("DROP TABLE serves", [])?;
+        self.conn.execute("DROP TABLE servers", [])?;
         Ok(())
     }
 }
