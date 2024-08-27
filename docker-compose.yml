@@ -7,3 +7,4 @@ services:
     environment:
       - THREADS=1000
       - DB=/app/data/database.db
+      - UPDATE=0

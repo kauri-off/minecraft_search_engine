@@ -48,4 +48,30 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn get_all(&self) -> Result<Vec<Info>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM servers")?;
+
+        let rows: Vec<Result<Info>> = stmt
+            .query_map([], |row| {
+                Ok(Info {
+                    ip: row.get(0)?,
+                    port: "25565".to_string(),
+                    version: row.get(1)?,
+                    description: row.get(2)?,
+                    online: row.get(3)?,
+                    max_online: row.get(4)?,
+                    license: row.get(5)?,
+                })
+            })?
+            .collect();
+        let successes: Vec<Info> = rows.into_iter().filter_map(Result::ok).collect();
+
+        Ok(successes)
+    }
+
+    pub fn drop_servers(&self) -> Result<()> {
+        self.conn.execute("DROP TABLE serves", [])?;
+        Ok(())
+    }
 }

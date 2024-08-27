@@ -12,6 +12,7 @@ use crate::{
     types::var_int::VarInt,
 };
 
+#[derive(Debug)]
 pub struct Info {
     pub ip: String,
     pub port: String,
