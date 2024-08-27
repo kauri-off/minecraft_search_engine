@@ -1,4 +1,4 @@
-use std::{env, io::Result, net::SocketAddr, sync::Arc};
+use std::{env, io::Result, net::SocketAddr, sync::Arc, time::Duration};
 
 use checker::get_full_info;
 use colored::Colorize;
@@ -9,6 +9,7 @@ use tokio::{
         Mutex,
     },
     task::JoinSet,
+    time::timeout,
 };
 use utils::{check_port_open, get_random_ip};
 
@@ -85,9 +86,12 @@ async fn update(path: &str) -> Result<()> {
 
         for server in chunk {
             let db_clone = db.clone();
-            set.spawn(process_ip(
-                format!("{}:{}", server.ip, server.port).parse().unwrap(),
-                db_clone,
+            set.spawn(timeout(
+                Duration::from_secs(5),
+                process_ip(
+                    format!("{}:{}", server.ip, server.port).parse().unwrap(),
+                    db_clone,
+                ),
             ));
         }
 
