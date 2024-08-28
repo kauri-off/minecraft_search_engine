@@ -35,8 +35,8 @@ async fn process_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()>
     println!(
         "[+] ({}) -> {} | {} | {}/{}",
         info_parsed.ip,
-        info_parsed.version,
-        info_parsed.description,
+        info_parsed.version.red(),
+        info_parsed.description.replace("\n", "|").blue(),
         info_parsed.online,
         info_parsed.max_online
     );
@@ -92,8 +92,8 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
         println!(
             "[*] ({}) -> {} | {} | {}/{}",
             info_parsed.ip,
-            info_parsed.version,
-            info_parsed.description,
+            info_parsed.version.red(),
+            info_parsed.description.replace("\n", "|").blue(),
             info_parsed.online,
             info_parsed.max_online
         );
