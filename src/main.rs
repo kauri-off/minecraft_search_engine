@@ -85,7 +85,9 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
         .await
         .unwrap();
 
-    if info["status"]["players"]["online"].as_i64().unwrap() > 0 {
+    if info["status"]["players"]["online"].as_i64().unwrap() > 0
+        && info["license"].as_i64().unwrap() == 0
+    {
         println!(
             "[*] ({}) -> {} | {}/{}",
             info["ip"].as_str().unwrap(),
