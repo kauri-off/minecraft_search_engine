@@ -2,7 +2,8 @@ use std::{env, io::Result, net::SocketAddr, sync::Arc, time::Duration};
 
 use checker::get_full_info;
 use colored::Colorize;
-use database::Database;
+use database::MongoDBClient;
+use mongodb::bson::doc;
 use tokio::{
     sync::{
         mpsc::{self, Receiver, Sender},
@@ -21,41 +22,20 @@ mod checker;
 mod database;
 mod utils;
 
-async fn process_ip(ip: SocketAddr, db: Arc<Mutex<Database>>, only_cracked: bool) -> Result<()> {
+async fn process_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
     let info = get_full_info(ip).await?;
 
-    let (prefix, license) = match info.license {
-        1 => ("/", "License: Yes".to_string()),
-        0 => ("+", "License: No".green().to_string()),
-        -1 => ("-", "License: Error".to_string()),
-        _ => ("", "".to_string()),
-    };
-
-    db.lock().await.add(&info).unwrap();
-
-    if only_cracked && info.license != 0 {
-        return Ok(());
-    }
-
-    println!(
-        "[{}] ({}) -> {} | {} | {}/{} | {}",
-        prefix,
-        info.ip,
-        info.version.red(),
-        info.description.blue(),
-        info.online,
-        info.max_online,
-        license
-    );
+    dbg!(&info);
+    db.lock().await.add(&info).await?;
 
     Ok(())
 }
 
-async fn wait_for_ip(mut rx: Receiver<SocketAddr>, path: String, only_cracked: bool) {
-    let db = Database::new(&path).unwrap();
+async fn wait_for_ip(mut rx: Receiver<SocketAddr>) {
+    let db = MongoDBClient::new().await;
 
     while let Some(ip) = rx.recv().await {
-        tokio::spawn(process_ip(ip, db.clone(), only_cracked));
+        tokio::spawn(process_ip(ip, db.clone()));
     }
 }
 
@@ -71,31 +51,55 @@ async fn generator(tx: Arc<Sender<SocketAddr>>) {
     }
 }
 
-async fn update(path: &str, only_cracked: bool) -> Result<()> {
-    let db = Database::new(path).unwrap();
+async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
+    let info = get_full_info(ip).await?;
 
-    let servers = db.lock().await.get_all().unwrap();
-    db.lock().await.drop_servers().unwrap();
+    db.lock()
+        .await
+        .servers
+        .update_one(
+            doc! {"ip": ip.ip().to_string()},
+            doc! {
+            "$set": {
+                "status.players.online": info["status"]["players"]["online"].as_i64().unwrap(),
+                "status.players.max": info["status"]["players"]["max"].as_i64().unwrap()
+            },
+            "$addToSet": {
+                "status.players.sample": {
+                    "$each": mongodb::bson::to_bson(info["status"]["players"]["sample"].as_array().unwrap_or(&vec![])).unwrap()
+                }
+            }
+            },
+        )
+        .await
+        .unwrap();
 
-    println!(
-        "{} Servers table is dropped for updating",
-        "WARNING".yellow()
-    );
-    println!("{} STOP app", "DO NOT".red());
+    Ok(())
+}
+
+async fn update() -> Result<()> {
+    let db = MongoDBClient::new().await;
+
+    let servers = db.lock().await.get_all().await.unwrap();
+
     println!("Updating: {} servers", servers.len());
 
-    for chunk in servers.chunks(30) {
-        // Создаем задачи для каждого элемента в чанке
+    for chunk in servers.chunks(100) {
         let mut set = JoinSet::new();
 
         for server in chunk {
             let db_clone = db.clone();
             set.spawn(timeout(
                 Duration::from_secs(5),
-                process_ip(
-                    format!("{}:{}", server.ip, server.port).parse().unwrap(),
+                update_ip(
+                    format!(
+                        "{}:{}",
+                        server["ip"].as_str().unwrap(),
+                        server["port"].as_str().unwrap()
+                    )
+                    .parse()
+                    .unwrap(),
                     db_clone,
-                    only_cracked,
                 ),
             ));
         }
@@ -122,26 +126,13 @@ async fn main() {
         .unwrap_or("1000".to_string())
         .parse()
         .unwrap();
-    let path = env::var("DB").unwrap_or("/app/data/database.db".to_string());
-    let update_db: bool = env::var("UPDATE")
-        .unwrap_or("0".to_string())
-        .parse::<u8>()
-        .map(|v| v != 0)
-        .unwrap_or(false);
-    let only_cracked: bool = env::var("ONLY_CRACKED")
-        .unwrap_or("0".to_string())
-        .parse::<u8>()
-        .map(|v| v != 0)
-        .unwrap_or(false);
 
-    if update_db {
-        if let Err(e) = update(&path, only_cracked).await {
-            println!("Updating: {}, {}", "error".red(), e);
-        }
+    if let Err(e) = update().await {
+        println!("Updating: {}, {}", "error".red(), e);
     }
 
     let (tx, rx) = mpsc::channel(256);
-    let reciever_thread = tokio::spawn(wait_for_ip(rx, path, only_cracked));
+    let reciever_thread = tokio::spawn(wait_for_ip(rx));
 
     let mut generators = Vec::new();
     let tx = Arc::new(tx);

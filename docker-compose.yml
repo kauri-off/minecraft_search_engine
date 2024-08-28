@@ -6,6 +6,21 @@ services:
       - ./db:/app/data
     environment:
       - THREADS=1000
-      - DB=/app/data/database.db
-      - UPDATE=0
-      - ONLY_CRACKED=0
+    networks:
+      - mse
+
+  mse_mongodb:
+    image: mongo:latest
+    command: ["mongod", "--quiet", "--logpath", "/dev/null", "--logappend"]
+    ports:
+      - "127.0.0.1:27017:27017"
+    networks:
+      - mse
+    volumes:
+      - ./data/mongo_data:/data/db
+    restart: unless-stopped
+
+networks:
+  mse:
+    name: mse
+    driver: bridge

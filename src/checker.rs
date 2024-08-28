@@ -3,7 +3,7 @@ use std::{
     net::SocketAddr,
 };
 
-use serde_json::Value;
+use serde_json::{json, Value};
 use tokio::net::TcpSocket;
 
 use crate::{
@@ -12,20 +12,9 @@ use crate::{
     types::var_int::VarInt,
 };
 
-#[derive(Debug)]
-pub struct Info {
-    pub ip: String,
-    pub port: String,
-    pub version: String,
-    pub description: String,
-    pub online: i64,
-    pub max_online: i64,
-    pub license: i32,
-}
-
-pub async fn get_full_info(addr: SocketAddr) -> Result<Info> {
+pub async fn get_full_info(addr: SocketAddr) -> Result<Value> {
     let motd = get_motd(addr).await?;
-    let licensed = license(addr, motd.protocol).await;
+    let licensed = license(addr, motd["version"]["protocol"].as_i64().unwrap_or(765)).await;
 
     let license = match licensed {
         Ok(t) => {
@@ -38,26 +27,16 @@ pub async fn get_full_info(addr: SocketAddr) -> Result<Info> {
         Err(_) => -1,
     };
 
-    Ok(Info {
-        ip: addr.ip().to_string(),
-        port: addr.port().to_string(),
-        version: motd.version,
-        description: motd.motd,
-        online: motd.online,
-        max_online: motd.max_online,
-        license,
-    })
+    let mut info = json!({});
+    info["ip"] = json!(addr.ip().to_string());
+    info["port"] = json!(addr.port().to_string());
+    info["license"] = json!(license);
+    info["status"] = motd;
+
+    Ok(info)
 }
 
-pub struct ServerStatus {
-    pub version: String,
-    pub motd: String,
-    pub online: i64,
-    pub max_online: i64,
-    pub protocol: i64,
-}
-
-pub async fn get_motd(addr: SocketAddr) -> Result<ServerStatus> {
+pub async fn get_motd(addr: SocketAddr) -> Result<Value> {
     let socket = TcpSocket::new_v4()?;
     let mut stream = socket.connect(addr).await?;
 
@@ -76,29 +55,7 @@ pub async fn get_motd(addr: SocketAddr) -> Result<ServerStatus> {
     let response = Packet::read_uncompressed(&mut stream).await?;
     let status = Status::deserialize(&response).await?;
 
-    let status: Value = serde_json::from_str(&status.status)?;
-
-    let motd = if let Some(motd) = status["description"].as_str() {
-        motd.to_string()
-    } else if let Some(t) = status["description"]["extra"].as_array() {
-        t.iter()
-            .map(|v| v.as_str().unwrap_or("").to_string())
-            .collect::<Vec<String>>()
-            .join("")
-            .to_string()
-    } else if let Some(motd) = status["description"]["text"].as_str() {
-        motd.to_string()
-    } else {
-        String::from("None")
-    };
-
-    Ok(ServerStatus {
-        version: status["version"]["name"].as_str().unwrap_or("").to_string(),
-        motd,
-        online: status["players"]["online"].as_i64().unwrap_or(-1),
-        max_online: status["players"]["max"].as_i64().unwrap_or(-1),
-        protocol: status["version"]["protocol"].as_i64().unwrap_or(765),
-    })
+    Ok(serde_json::from_str(&status.status)?)
 }
 
 pub async fn license(addr: SocketAddr, protocol: i64) -> Result<bool> {

@@ -1,77 +1,51 @@
-use std::sync::Arc;
+use std::{io::Result, sync::Arc};
 
-use rusqlite::{params, Connection, Result};
+use mongodb::{
+    bson::{doc, Document},
+    options::ClientOptions,
+    Client, Collection, Cursor, Database,
+};
+use serde_json::Value;
 use tokio::sync::Mutex;
 
-use crate::checker::Info;
-
-pub struct Database {
-    conn: Connection,
+pub struct MongoDBClient {
+    conn: Client,
+    db: Database,
+    pub servers: Collection<Document>,
 }
 
-impl Database {
-    pub fn new(path: &str) -> Result<Arc<Mutex<Self>>> {
-        let conn = Connection::open(path)?;
-        let db = Database { conn };
+impl MongoDBClient {
+    pub async fn new() -> Arc<Mutex<Self>> {
+        let client_options = ClientOptions::parse("mongodb://mse_mongodb:27017")
+            .await
+            .unwrap();
+        let client = Client::with_options(client_options).unwrap();
 
-        db.init_table()?;
+        let db = client.database("minecraft_search_engine");
+        let collection = db.collection("servers");
 
-        Ok(Arc::new(Mutex::new(db)))
+        Arc::new(Mutex::new(MongoDBClient {
+            conn: client,
+            db,
+            servers: collection,
+        }))
     }
 
-    fn init_table(&self) -> Result<()> {
-        self.conn.execute(
-            "CREATE TABLE IF NOT EXISTS servers (
-                ip TEXT,
-               	version	TEXT,
-               	motd	TEXT,
-               	online	INTEGER,
-               	max_online	INTEGER,
-               	license	INTEGER
-            );",
-            [],
-        )?;
+    pub async fn add(&self, info: &Value) -> Result<()> {
+        let bson_doc = mongodb::bson::to_document(info).expect("Failed to convert JSON to BSON");
+
+        self.servers.insert_one(bson_doc).await.unwrap();
         Ok(())
     }
 
-    pub fn add(&self, info: &Info) -> Result<()> {
-        self.conn.execute(
-            "INSERT INTO servers (ip, version, motd, online, max_online, license) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![
-                info.ip,
-                info.version,
-                info.description,
-                info.online,
-                info.max_online,
-                info.license
-            ],
-        )?;
-        Ok(())
-    }
+    pub async fn get_all(&self) -> Result<Vec<Value>> {
+        let mut cursor = self.servers.find(doc! {}).await.unwrap();
 
-    pub fn get_all(&self) -> Result<Vec<Info>> {
-        let mut stmt = self.conn.prepare("SELECT * FROM servers")?;
+        let mut results: Vec<Value> = Vec::new();
+        while cursor.advance().await.unwrap() {
+            results.push(serde_json::to_value(&cursor.current()).unwrap());
+        }
 
-        let rows: Vec<Result<Info>> = stmt
-            .query_map([], |row| {
-                Ok(Info {
-                    ip: row.get(0)?,
-                    port: "25565".to_string(),
-                    version: row.get(1)?,
-                    description: row.get(2)?,
-                    online: row.get(3)?,
-                    max_online: row.get(4)?,
-                    license: row.get(5)?,
-                })
-            })?
-            .collect();
-        let successes: Vec<Info> = rows.into_iter().filter_map(Result::ok).collect();
-
-        Ok(successes)
-    }
-
-    pub fn drop_servers(&self) -> Result<()> {
-        self.conn.execute("DELETE FROM servers", [])?;
-        Ok(())
+        Ok(results)
     }
 }
