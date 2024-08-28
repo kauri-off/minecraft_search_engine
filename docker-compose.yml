@@ -5,7 +5,7 @@ services:
     volumes:
       - ./db:/app/data
     environment:
-      - THREADS=1000
+      - THREADS=900
     networks:
       - mse
     depends_on:

@@ -1,4 +1,4 @@
-use std::{env, io::Result, net::SocketAddr, sync::Arc, time::Duration};
+use std::{env, io::Result, net::SocketAddr, sync::Arc};
 
 use checker::get_full_info;
 use colored::Colorize;
@@ -10,7 +10,7 @@ use tokio::{
         Mutex,
     },
     task::JoinSet,
-    time::timeout,
+    time::{sleep, timeout, Duration},
 };
 use utils::{check_port_open, get_random_ip};
 
@@ -128,19 +128,25 @@ async fn update() -> Result<()> {
     Ok(())
 }
 
+async fn update_loop() {
+    loop {
+        update().await.unwrap();
+
+        sleep(Duration::from_secs(5 * 60)).await;
+    }
+}
+
 #[tokio::main]
 async fn main() {
     colored::control::set_override(true);
     println!("Minectaft Search Engine --- {}", "Starting".green());
 
     let threads: i32 = env::var("THREADS")
-        .unwrap_or("1000".to_string())
+        .unwrap_or("900".to_string())
         .parse()
         .unwrap();
 
-    if let Err(e) = update().await {
-        println!("Updating: {}, {}", "error".red(), e);
-    }
+    let update_thread = tokio::spawn(update_loop());
 
     let (tx, rx) = mpsc::channel(256);
     let reciever_thread = tokio::spawn(wait_for_ip(rx));
@@ -153,6 +159,7 @@ async fn main() {
     }
 
     reciever_thread.await.unwrap();
+    update_thread.await.unwrap();
 
     for generator in generators {
         generator.await.unwrap();

@@ -3,7 +3,7 @@ use std::{io::Result, sync::Arc};
 use mongodb::{
     bson::{doc, Document},
     options::ClientOptions,
-    Client, Collection, Cursor, Database,
+    Client, Collection, Database,
 };
 use serde_json::Value;
 use tokio::sync::Mutex;
