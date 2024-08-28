@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub async fn get_full_info(addr: SocketAddr) -> Result<Value> {
-    let motd = get_motd(addr).await?;
+    let motd = get_status(addr).await?;
     let licensed = license(addr, motd["version"]["protocol"].as_i64().unwrap_or(765)).await;
 
     let license = match licensed {
@@ -36,7 +36,7 @@ pub async fn get_full_info(addr: SocketAddr) -> Result<Value> {
     Ok(info)
 }
 
-pub async fn get_motd(addr: SocketAddr) -> Result<Value> {
+pub async fn get_status(addr: SocketAddr) -> Result<Value> {
     let socket = TcpSocket::new_v4()?;
     let mut stream = socket.connect(addr).await?;
 

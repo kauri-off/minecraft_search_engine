@@ -12,7 +12,7 @@ use tokio::{
     task::JoinSet,
     time::{sleep, timeout, Duration},
 };
-use utils::{check_port_open, get_random_ip};
+use utils::{check_port_open, get_random_ip, StatusWrap};
 
 mod packet;
 mod packets;
@@ -24,19 +24,21 @@ mod utils;
 
 async fn process_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
     let info = get_full_info(ip).await?;
+    let info_parsed = StatusWrap::from_value(&info);
 
     db.lock().await.add(&info).await?;
 
-    if info["license"].as_i64().unwrap() != 0 {
+    if info_parsed.license != 0 {
         return Ok(());
     }
 
     println!(
-        "[+] ({}) -> {} | {}/{}",
-        info["ip"].as_str().unwrap(),
-        info["status"]["version"]["name"].as_str().unwrap().red(),
-        info["status"]["players"]["online"].as_i64().unwrap(),
-        info["status"]["players"]["max"].as_i64().unwrap(),
+        "[+] ({}) -> {} | {} | {}/{}",
+        info_parsed.ip,
+        info_parsed.version,
+        info_parsed.description,
+        info_parsed.online,
+        info_parsed.max_online
     );
 
     Ok(())
@@ -64,6 +66,7 @@ async fn generator(tx: Arc<Sender<SocketAddr>>) {
 
 async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
     let info = get_full_info(ip).await?;
+    let info_parsed = StatusWrap::from_value(&info);
 
     db.lock()
         .await
@@ -72,8 +75,8 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
             doc! {"ip": ip.ip().to_string()},
             doc! {
             "$set": {
-                "status.players.online": info["status"]["players"]["online"].as_i64().unwrap(),
-                "status.players.max": info["status"]["players"]["max"].as_i64().unwrap()
+                "status.players.online": info_parsed.online,
+                "status.players.max": info_parsed.max_online
             },
             "$addToSet": {
                 "status.players.sample": {
@@ -85,15 +88,14 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
         .await
         .unwrap();
 
-    if info["status"]["players"]["online"].as_i64().unwrap() > 0
-        && info["license"].as_i64().unwrap() == 0
-    {
+    if info_parsed.online > 0 && info_parsed.license == 0 {
         println!(
-            "[*] ({}) -> {} | {}/{}",
-            info["ip"].as_str().unwrap(),
-            info["status"]["version"]["name"].as_str().unwrap().red(),
-            info["status"]["players"]["online"].as_i64().unwrap(),
-            info["status"]["players"]["max"].as_i64().unwrap(),
+            "[*] ({}) -> {} | {} | {}/{}",
+            info_parsed.ip,
+            info_parsed.version,
+            info_parsed.description,
+            info_parsed.online,
+            info_parsed.max_online
         );
     }
 
