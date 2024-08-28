@@ -75,8 +75,8 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
             doc! {"ip": ip.ip().to_string()},
             doc! {
             "$set": {
-                "status.players.online": info["players"]["online"].as_str().unwrap_or("err"),
-                "status.players.max": info["players"]["max"].as_str().unwrap_or("err"),
+                "status.players.online": info["players"]["online"].as_i64().unwrap_or(-1),
+                "status.players.max": info["players"]["max"].as_i64().unwrap_or(-1),
                 "lastSeen": DateTime::now()
             },
             "$addToSet": {
