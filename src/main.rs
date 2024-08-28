@@ -1,6 +1,6 @@
 use std::{env, io::Result, net::SocketAddr, sync::Arc};
 
-use checker::get_full_info;
+use checker::{get_full_info, get_status};
 use colored::Colorize;
 use database::MongoDBClient;
 use mongodb::bson::{doc, DateTime};
@@ -66,8 +66,7 @@ async fn generator(tx: Arc<Sender<SocketAddr>>) {
 }
 
 async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
-    let info = get_full_info(ip).await?;
-    let info_parsed = StatusWrap::from_value(&info);
+    let info = get_status(ip).await?;
 
     db.lock()
         .await
@@ -76,30 +75,19 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
             doc! {"ip": ip.ip().to_string()},
             doc! {
             "$set": {
-                "status.players.online": info_parsed.online,
-                "status.players.max": info_parsed.max_online,
+                "status.players.online": info["players"]["online"].as_str().unwrap_or("err"),
+                "status.players.max": info["players"]["max"].as_str().unwrap_or("err"),
                 "lastSeen": DateTime::now()
             },
             "$addToSet": {
                 "status.players.sample": {
-                    "$each": mongodb::bson::to_bson(info["status"]["players"]["sample"].as_array().unwrap_or(&vec![])).unwrap()
+                    "$each": mongodb::bson::to_bson(info["players"]["sample"].as_array().unwrap_or(&vec![])).unwrap()
                 }
             }
             },
         )
         .await
         .unwrap();
-
-    if info_parsed.online > 0 && info_parsed.license == 0 {
-        println!(
-            "[*] ({}) -> {} | {} | {}/{}",
-            info_parsed.ip,
-            info_parsed.version.red(),
-            info_parsed.description.replace("\n", "|").blue(),
-            info_parsed.online,
-            info_parsed.max_online
-        );
-    }
 
     Ok(())
 }
