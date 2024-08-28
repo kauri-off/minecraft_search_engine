@@ -8,6 +8,8 @@ services:
       - THREADS=1000
     networks:
       - mse
+    depends_on:
+      - mse_mongodb
 
   mse_mongodb:
     image: mongo:latest

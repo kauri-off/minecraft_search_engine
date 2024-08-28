@@ -25,8 +25,19 @@ mod utils;
 async fn process_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
     let info = get_full_info(ip).await?;
 
-    dbg!(&info);
     db.lock().await.add(&info).await?;
+
+    if info["license"].as_i64().unwrap() != 0 {
+        return Ok(());
+    }
+
+    println!(
+        "[+] ({}) -> {} | {}/{}",
+        info["ip"].as_str().unwrap(),
+        info["status"]["version"]["name"].as_str().unwrap().red(),
+        info["status"]["players"]["online"].as_str().unwrap(),
+        info["status"]["players"]["max"].as_str().unwrap(),
+    );
 
     Ok(())
 }
