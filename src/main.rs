@@ -3,7 +3,7 @@ use std::{env, io::Result, net::SocketAddr, sync::Arc};
 use checker::get_full_info;
 use colored::Colorize;
 use database::MongoDBClient;
-use mongodb::bson::doc;
+use mongodb::bson::{doc, DateTime};
 use tokio::{
     sync::{
         mpsc::{self, Receiver, Sender},
@@ -76,7 +76,8 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
             doc! {
             "$set": {
                 "status.players.online": info_parsed.online,
-                "status.players.max": info_parsed.max_online
+                "status.players.max": info_parsed.max_online,
+                "lastSeen": DateTime::now()
             },
             "$addToSet": {
                 "status.players.sample": {

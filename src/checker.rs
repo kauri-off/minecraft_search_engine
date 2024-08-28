@@ -3,6 +3,7 @@ use std::{
     net::SocketAddr,
 };
 
+use mongodb::bson::DateTime;
 use serde_json::{json, Value};
 use tokio::net::TcpSocket;
 
@@ -32,6 +33,7 @@ pub async fn get_full_info(addr: SocketAddr) -> Result<Value> {
     info["port"] = json!(addr.port().to_string());
     info["license"] = json!(license);
     info["status"] = motd;
+    info["lastSeen"] = json!(DateTime::now());
 
     Ok(info)
 }
