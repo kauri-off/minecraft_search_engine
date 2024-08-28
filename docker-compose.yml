@@ -3,7 +3,7 @@ services:
     build: .
     restart: unless-stopped
     volumes:
-      - ./db:/app/data
+      - ./data/mse:/app/data
     environment:
       - THREADS=900
     networks:
