@@ -37,6 +37,8 @@ impl StatusWrap {
                         result += str;
                     }
                 }
+            } else if let Some(text) = value["status"]["description"].as_str() {
+                result += text;
             } else if let Some(text) = value["status"]["description"]["text"].as_str() {
                 result += text;
             }
