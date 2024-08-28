@@ -35,8 +35,8 @@ async fn process_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()>
         "[+] ({}) -> {} | {}/{}",
         info["ip"].as_str().unwrap(),
         info["status"]["version"]["name"].as_str().unwrap().red(),
-        info["status"]["players"]["online"].as_str().unwrap(),
-        info["status"]["players"]["max"].as_str().unwrap(),
+        info["status"]["players"]["online"].as_i64().unwrap(),
+        info["status"]["players"]["max"].as_i64().unwrap(),
     );
 
     Ok(())
