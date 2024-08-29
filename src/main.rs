@@ -4,7 +4,6 @@ use checker::{get_full_info, get_status};
 use colored::Colorize;
 use database::MongoDBClient;
 use mongodb::bson::{doc, DateTime};
-use serde_json::json;
 use tokio::{
     fs,
     sync::{
@@ -25,11 +24,7 @@ mod database;
 mod utils;
 
 async fn process_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
-    let mut info = get_full_info(ip).await?;
-    if let None = info["status"]["players"]["sample"].as_array() {
-        info["status"]["players"]["sample"] = json!([]);
-    }
-
+    let info = get_full_info(ip).await?;
     let info_parsed = StatusWrap::from_value(&info);
 
     db.lock().await.add(&info).await?;
@@ -80,12 +75,11 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
             doc! {"ip": ip.ip().to_string()},
             doc! {
             "$set": {
-                "status.players.online": info["players"]["online"].as_i64().unwrap_or(-1),
-                "status.players.max": info["players"]["max"].as_i64().unwrap_or(-1),
+                "status": mongodb::bson::to_bson(&info).unwrap(),
                 "lastSeen": DateTime::now()
             },
             "$addToSet": {
-                "status.players.sample": {
+                "players": {
                     "$each": mongodb::bson::to_bson(info["players"]["sample"].as_array().unwrap_or(&vec![])).unwrap()
                 }
             }

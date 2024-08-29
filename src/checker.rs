@@ -32,8 +32,15 @@ pub async fn get_full_info(addr: SocketAddr) -> Result<Value> {
     info["ip"] = json!(addr.ip().to_string());
     info["port"] = json!(addr.port().to_string());
     info["license"] = json!(license);
-    info["status"] = motd;
     info["lastSeen"] = json!(DateTime::now());
+
+    if motd["players"]["sample"].is_array() {
+        info["players"] = motd["players"]["sample"].clone();
+    } else {
+        info["players"] = json!([]);
+    }
+
+    info["status"] = motd;
 
     Ok(info)
 }
