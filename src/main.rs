@@ -27,7 +27,7 @@ mod utils;
 async fn process_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> {
     let mut info = get_full_info(ip).await?;
     if let None = info["status"]["players"]["sample"].as_array() {
-        info["status"]["players"]["sample"] = json!({});
+        info["status"]["players"]["sample"] = json!([]);
     }
 
     let info_parsed = StatusWrap::from_value(&info);
