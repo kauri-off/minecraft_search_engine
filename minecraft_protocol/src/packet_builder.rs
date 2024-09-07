@@ -1,6 +1,7 @@
-use crate::types::{num::Integer, var_int::VarInt};
-
-use super::packet::UncompressedPacket;
+use crate::{
+    types::{num::Integer, var_int::VarInt},
+    UncompressedPacket,
+};
 
 pub struct PacketBuilder {
     pub packet_id: VarInt,

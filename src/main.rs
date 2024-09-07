@@ -15,9 +15,7 @@ use tokio::{
 };
 use utils::{check_port_open, get_random_ip, StatusWrap};
 
-mod packet;
 mod packets;
-mod types;
 
 mod checker;
 mod database;

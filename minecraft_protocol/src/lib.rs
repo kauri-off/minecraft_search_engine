@@ -3,9 +3,13 @@ use std::{
     io::{self, Cursor, Read, Write},
 };
 
-use crate::types::var_int::VarInt;
 use flate2::{bufread::ZlibDecoder, write::ZlibEncoder, Compression};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use types::var_int::VarInt;
+
+pub mod packet_builder;
+pub mod packet_reader;
+pub mod types;
 
 #[derive(Clone)]
 pub enum Packet {

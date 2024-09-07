@@ -1,10 +1,8 @@
 use std::io;
 
-use crate::{
-    packet::{
-        packet::UncompressedPacket, packet_builder::PacketBuilder, packet_reader::PacketReader,
-    },
-    types::var_int::VarInt,
+use minecraft_protocol::{
+    packet_builder::PacketBuilder, packet_reader::PacketReader, types::var_int::VarInt,
+    UncompressedPacket,
 };
 
 pub trait PacketActions: Sized {

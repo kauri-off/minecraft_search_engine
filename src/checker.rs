@@ -3,15 +3,12 @@ use std::{
     net::SocketAddr,
 };
 
+use minecraft_protocol::{packet_builder::PacketBuilder, types::var_int::VarInt, Packet};
 use mongodb::bson::DateTime;
 use serde_json::{json, Value};
 use tokio::net::TcpSocket;
 
-use crate::{
-    packet::{packet::Packet, packet_builder::PacketBuilder},
-    packets::packets::{Handshake, LoginStart, PacketActions, SetCompression, Status},
-    types::var_int::VarInt,
-};
+use crate::packets::packets::{Handshake, LoginStart, PacketActions, SetCompression, Status};
 
 pub async fn get_full_info(addr: SocketAddr) -> Result<Value> {
     let motd = get_status(addr).await?;

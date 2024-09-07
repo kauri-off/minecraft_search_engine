@@ -1,8 +1,9 @@
 use std::io::{self, Cursor, Error, ErrorKind, Read};
 
-use crate::types::{num::Integer, var_int::VarInt};
-
-use super::packet::UncompressedPacket;
+use crate::{
+    types::{num::Integer, var_int::VarInt},
+    UncompressedPacket,
+};
 
 pub struct PacketReader {
     stream: Cursor<Vec<u8>>,
