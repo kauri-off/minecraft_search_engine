@@ -8,6 +8,7 @@ RUN cargo build --release
 
 RUN rm -rf src
 COPY ./src ./src
+COPY ./minecraft_protocol ./minecraft_protocol
 
 RUN cargo build --release
 
