@@ -92,7 +92,7 @@ async fn update_ip(ip: SocketAddr, db: Arc<Mutex<MongoDBClient>>) -> Result<()> 
 async fn update() -> Result<()> {
     let db = MongoDBClient::new().await;
 
-    let servers = db.lock().await.get_all().await.unwrap();
+    let servers = db.lock().await.get_ips().await.unwrap();
 
     println!("Updating: {} servers", servers.len());
 
@@ -106,8 +106,8 @@ async fn update() -> Result<()> {
                 update_ip(
                     format!(
                         "{}:{}",
-                        server["ip"].as_str().unwrap(),
-                        server["port"].as_str().unwrap()
+                        server.0,
+                        server.1
                     )
                     .parse()
                     .unwrap(),

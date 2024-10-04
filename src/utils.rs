@@ -7,6 +7,7 @@ use rand::Rng;
 use serde_json::Value;
 use tokio::{net::TcpSocket, time::timeout};
 
+#[allow(dead_code)]
 pub struct StatusWrap {
     pub ip: String,
     pub port: String,
