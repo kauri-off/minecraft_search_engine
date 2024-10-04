@@ -11,6 +11,6 @@ RUN cargo build --release
 RUN rm -rf src
 COPY ./src ./src
 
-RUN cargo build --release
+RUN cargo build --release --force
 
 CMD [ "./target/release/minecraft_search_engine" ]
