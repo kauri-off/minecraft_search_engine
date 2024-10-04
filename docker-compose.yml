@@ -4,6 +4,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./data/mse:/app/data
+      
     environment:
       - THREADS=900
     networks:
