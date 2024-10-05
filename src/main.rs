@@ -5,7 +5,6 @@ use colored::Colorize;
 use database::MongoDBClient;
 use mongodb::bson::{doc, DateTime};
 use tokio::{
-    fs,
     sync::{
         mpsc::{self, Receiver, Sender},
         Mutex,
@@ -137,20 +136,6 @@ async fn update_loop() {
     }
 }
 
-async fn interrupt_wait() {
-    let db = MongoDBClient::new().await;
-
-    loop {
-        if let Ok(data) = fs::read_to_string("/app/data/interrupt.txt").await {
-            if let Err(e) = process_ip(data.trim().parse().unwrap(), db.clone()).await {
-                println!("Interrupt error, {}", e);
-            }
-            fs::remove_file("/app/data/interrupt.txt").await.unwrap();
-        }
-        sleep(Duration::from_secs(5)).await;
-    }
-}
-
 #[tokio::main]
 async fn main() {
     colored::control::set_override(true);
@@ -162,7 +147,6 @@ async fn main() {
         .unwrap();
 
     let update_thread = tokio::spawn(update_loop());
-    let interrupt_thread = tokio::spawn(interrupt_wait());
 
     let (tx, rx) = mpsc::channel(256);
     let reciever_thread = tokio::spawn(wait_for_ip(rx));
@@ -180,5 +164,4 @@ async fn main() {
     for generator in generators {
         generator.await.unwrap();
     }
-    interrupt_thread.await.unwrap();
 }
